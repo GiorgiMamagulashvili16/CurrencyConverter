@@ -6,8 +6,8 @@ import okhttp3.Response
 
 class NetworkConnectionInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        if (!isConnected())
-            throw NetworkConnectionException()
+//        if (!isConnected())
+//            throw NetworkConnectionException()
         val builder = chain.request().newBuilder()
         return chain.proceed(builder.build())
     }

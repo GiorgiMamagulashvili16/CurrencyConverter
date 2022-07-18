@@ -9,7 +9,7 @@ import okhttp3.OkHttpClient
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
+import retrofit2.converter.gson.GsonConverterFactory
 
 val networkModule = module {
 
@@ -35,7 +35,10 @@ val networkModule = module {
 }
 
 fun provideRetrofit(baseUrl: String, moshi: Moshi, client: OkHttpClient): Retrofit =
-    Retrofit.Builder().baseUrl(baseUrl).client(client).addConverterFactory(MoshiConverterFactory.create(moshi))
+    Retrofit.Builder()
+        .baseUrl(baseUrl)
+        .client(client)
+        .addConverterFactory(GsonConverterFactory.create())
         .build()
 
 fun provideCurrencyApi(retrofit: Retrofit): CurrencyService =
