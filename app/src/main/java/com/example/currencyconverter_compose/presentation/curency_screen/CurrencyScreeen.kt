@@ -33,6 +33,7 @@ import com.example.currencyconverter_compose.presentation.curency_screen.states.
 import com.example.currencyconverter_compose.presentation.curency_screen.states.ErrorDialogState
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.getViewModel
+import org.koin.androidx.compose.viewModel
 
 @ExperimentalMaterialApi
 @Composable
@@ -65,10 +66,13 @@ fun CurrencyScreen() {
             showErrorDialog.value = ErrorDialogState(showDialog = it)
         })
     }
+
+
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         sheetContent = {
             BottomSheetContent(sheetList = vm.currenciesData.value, onItemClick = {
+                vm.setCurrency(it)
                 scope.launch { sheetState.collapse() }
             })
         },
@@ -90,7 +94,7 @@ fun CurrencyScreen() {
             EnterAmountSection(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 15.dp), "GEL"
+                    .padding(horizontal = 15.dp), vm.baseCurrency.value.code
             )
             Spacer(modifier = Modifier.height(15.dp))
             ConvertButtonSection(
@@ -113,7 +117,7 @@ fun CurrencyScreen() {
 fun BottomSheetContent(
     modifier: Modifier = Modifier,
     sheetList: List<CurrencyItem>,
-    onItemClick: (String) -> Unit
+    onItemClick: (CurrencyItem) -> Unit
 ) {
     Box(modifier = modifier) {
         LazyColumn(
@@ -122,13 +126,17 @@ fun BottomSheetContent(
                 .padding(15.dp)
         ) {
             items(sheetList) {
+                Spacer(modifier = Modifier.height(15.dp))
                 Text(
                     text = "${it.code} (${it.fullTitle})",
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            onItemClick.invoke(it.code)
-                        })
+                            onItemClick.invoke(it)
+                        },
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -153,18 +161,27 @@ fun CurrencyChooserSection(
     modifier: Modifier = Modifier,
     sheetState: BottomSheetState
 ) {
+    val vm: CurrenciesVm by viewModel()
     val coroutineScope = rememberCoroutineScope()
 
-    CurrencyChooser(title = stringResource(id = R.string.from), currentCurrency = "Algeria") {
+    CurrencyChooser(
+        title = stringResource(id = R.string.from),
+        currentCurrency = vm.baseCurrency.value.fullTitle
+    ) {
         coroutineScope.launch {
             sheetState.expand()
         }
+        vm.isFirstCurrencyChecked.value = true
     }
     Spacer(modifier = Modifier.height(10.dp))
-    CurrencyChooser(title = stringResource(id = R.string.to), currentCurrency = "Brazil") {
+    CurrencyChooser(
+        title = stringResource(id = R.string.to),
+        currentCurrency = vm.secondCurrency.value.fullTitle
+    ) {
         coroutineScope.launch {
             sheetState.expand()
         }
+        vm.isFirstCurrencyChecked.value = false
     }
 }
 
@@ -173,6 +190,8 @@ fun EnterAmountSection(
     modifier: Modifier = Modifier,
     baseCurrency: String
 ) {
+    val vm : CurrenciesVm by viewModel()
+
     Column(modifier = modifier) {
         Text(
             text = baseCurrency,
@@ -184,8 +203,8 @@ fun EnterAmountSection(
         )
         OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
-            value = "",
-            onValueChange = {},
+            value = if (vm.enteredAmount.value != null) vm.enteredAmount.value!! else "",
+            onValueChange = { vm.setAmount(it) },
             label = {
                 Text(text = stringResource(id = R.string.amount))
             },
@@ -206,9 +225,11 @@ fun EnterAmountSection(
 fun ConvertButtonSection(
     modifier: Modifier = Modifier
 ) {
+    val vm: CurrenciesVm by viewModel()
+
     Box(modifier = modifier) {
         Button(
-            onClick = { /*TODO*/ },
+            onClick = { vm.convert() },
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
                 .fillMaxSize(),
@@ -233,13 +254,15 @@ fun ConvertButtonSection(
 fun ResultAmountSection(
     modifier: Modifier = Modifier
 ) {
+    val vm :CurrenciesVm by viewModel()
+    val convertedData = vm.convertedData.value
     Column(modifier = modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(text = stringResource(id = R.string.result), fontSize = 14.sp, color = Color.Gray)
-            Text(text = "GEL", fontSize = 14.sp, color = Color.Gray)
+            Text(text = convertedData?.actualCurrency ?: "", fontSize = 14.sp, color = Color.Gray)
         }
         Spacer(modifier = Modifier.height(10.dp))
         Box(
@@ -251,7 +274,7 @@ fun ResultAmountSection(
             contentAlignment = Alignment.CenterStart,
         ) {
             Text(
-                text = stringResource(id = R.string.converted_amount),
+                text = convertedData?.convertedAmount ?: stringResource(id = R.string.converted_amount),
                 fontSize = 16.sp,
                 color = Color.Gray,
                 modifier = Modifier.padding(start = 10.dp)
