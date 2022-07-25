@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,24 +37,32 @@ import org.koin.androidx.compose.getViewModel
 @ExperimentalMaterialApi
 @Composable
 fun CurrencyScreen() {
+    val vm = getViewModel<CurrenciesVm>()
     val sheetState = rememberBottomSheetState(initialValue = BottomSheetValue.Collapsed)
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = sheetState
     )
     val scope = rememberCoroutineScope()
-    val vm = getViewModel<CurrenciesVm>()
+
     val screenState = vm.screenState.value
+
+    val showErrorDialog = remember {
+        mutableStateOf(ErrorDialogState())
+    }
+
     if (screenState.isLoading)
         LoadingDialog()
     screenState.fetchedCurrencies?.let {
         vm.setCurrenciesData(it)
     }
+
     screenState.errorMes?.let {
-        vm.showErrorDialog.value = ErrorDialogState(it, true)
+        showErrorDialog.value = ErrorDialogState(message = it, showDialog = true)
     }
-    if (vm.showErrorDialog.value.showDialog) {
-        ErrorMessageDialog(message = vm.showErrorDialog.value.message!!, setShowDialog = {
-            vm.showErrorDialog.value = ErrorDialogState(showDialog = it)
+
+    if (showErrorDialog.value.showDialog) {
+        ErrorMessageDialog(message = showErrorDialog.value.message!!, setShowDialog = {
+            showErrorDialog.value = ErrorDialogState(showDialog = it)
         })
     }
     BottomSheetScaffold(
