@@ -5,5 +5,5 @@ import com.example.currencyconverter_compose.domain.util.Resource
 
 interface CurrencyRepository {
 
-    suspend fun getCurrencyList(): Resource<CurrenciesDto>
+    suspend fun getCurrencyList(): CurrenciesDto
 }

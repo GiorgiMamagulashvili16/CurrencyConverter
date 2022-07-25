@@ -11,16 +11,5 @@ class CurrencyRepositoryImpl(
     private val api: CurrencyService
 ) : CurrencyRepository {
 
-    override suspend fun getCurrencyList(): Resource<CurrenciesDto> {
-        return try {
-            val response = api.getCurrencyList()
-            if (response.isSuccessful) {
-                Resource.Success(response.body()!!)
-            } else {
-                Resource.Error(response.errorBody()?.parseErrorBody() ?: "unKnown error")
-            }
-        } catch (e: IOException) {
-            Resource.Error(e.localizedMessage!!)
-        }
-    }
+    override suspend fun getCurrencyList(): CurrenciesDto  = api.getCurrencyList()
 }

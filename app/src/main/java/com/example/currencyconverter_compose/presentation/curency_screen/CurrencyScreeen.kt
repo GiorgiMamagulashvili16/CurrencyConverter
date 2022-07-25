@@ -1,11 +1,15 @@
 package com.example.currencyconverter_compose.presentation.curency_screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,40 +25,102 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.currencyconverter_compose.R
 import com.example.currencyconverter_compose.presentation.curency_screen.components.CurrencyChooser
+import com.example.currencyconverter_compose.presentation.curency_screen.components.ErrorMessageDialog
+import com.example.currencyconverter_compose.presentation.curency_screen.components.LoadingDialog
+import com.example.currencyconverter_compose.presentation.curency_screen.states.CurrencyItem
+import com.example.currencyconverter_compose.presentation.curency_screen.states.ErrorDialogState
+import kotlinx.coroutines.launch
+import org.koin.androidx.compose.getViewModel
 
+@ExperimentalMaterialApi
 @Composable
 fun CurrencyScreen() {
+    val sheetState = rememberBottomSheetState(initialValue = BottomSheetValue.Collapsed)
+    val scaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = sheetState
+    )
+    val scope = rememberCoroutineScope()
+    val vm = getViewModel<CurrenciesVm>()
+    val screenState = vm.screenState.value
+    if (screenState.isLoading)
+        LoadingDialog()
+    screenState.fetchedCurrencies?.let {
+        vm.setCurrenciesData(it)
+    }
+    screenState.errorMes?.let {
+        vm.showErrorDialog.value = ErrorDialogState(it, true)
+    }
+    if (vm.showErrorDialog.value.showDialog) {
+        ErrorMessageDialog(message = vm.showErrorDialog.value.message!!, setShowDialog = {
+            vm.showErrorDialog.value = ErrorDialogState(showDialog = it)
+        })
+    }
+    BottomSheetScaffold(
+        scaffoldState = scaffoldState,
+        sheetContent = {
+            BottomSheetContent(sheetList = vm.currenciesData.value, onItemClick = {
+                scope.launch { sheetState.collapse() }
+            })
+        },
+        sheetPeekHeight = 0.dp
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Header(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.18f)
+                    .padding(top = 10.dp, bottom = 10.dp, start = 20.dp)
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            CurrencyChooserSection(
+                modifier = Modifier.fillMaxWidth(),
+                sheetState = sheetState
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            EnterAmountSection(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 15.dp), "GEL"
+            )
+            Spacer(modifier = Modifier.height(15.dp))
+            ConvertButtonSection(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .padding(horizontal = 15.dp)
+            )
+            Spacer(modifier = Modifier.height(25.dp))
+            ResultAmountSection(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 15.dp)
+            )
+        }
+    }
+}
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Header(
+@Composable
+fun BottomSheetContent(
+    modifier: Modifier = Modifier,
+    sheetList: List<CurrencyItem>,
+    onItemClick: (String) -> Unit
+) {
+    Box(modifier = modifier) {
+        LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.18f)
-                .padding(top = 10.dp, bottom = 10.dp, start = 20.dp)
-        )
-        Spacer(modifier = Modifier.height(20.dp))
-        CurrencyChooserSection(
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-        EnterAmountSection(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 15.dp), "GEL"
-        )
-        Spacer(modifier = Modifier.height(15.dp))
-        ConvertButtonSection(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp)
-                .padding(horizontal = 15.dp)
-        )
-        Spacer(modifier = Modifier.height(25.dp))
-        ResultAmountSection(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 15.dp)
-        )
+                .fillMaxSize()
+                .padding(15.dp)
+        ) {
+            items(sheetList) {
+                Text(
+                    text = "${it.code} (${it.fullTitle})",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onItemClick.invoke(it.code)
+                        })
+            }
+        }
     }
 }
 
@@ -71,16 +137,24 @@ fun Header(modifier: Modifier = Modifier) {
     }
 }
 
+@ExperimentalMaterialApi
 @Composable
 fun CurrencyChooserSection(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sheetState: BottomSheetState
 ) {
-    CurrencyChooser(title = stringResource(id = R.string.from), currentCurrency = "Algeria") {
+    val coroutineScope = rememberCoroutineScope()
 
+    CurrencyChooser(title = stringResource(id = R.string.from), currentCurrency = "Algeria") {
+        coroutineScope.launch {
+            sheetState.expand()
+        }
     }
     Spacer(modifier = Modifier.height(10.dp))
     CurrencyChooser(title = stringResource(id = R.string.to), currentCurrency = "Brazil") {
-
+        coroutineScope.launch {
+            sheetState.expand()
+        }
     }
 }
 

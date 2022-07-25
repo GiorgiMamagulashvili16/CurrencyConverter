@@ -6,6 +6,6 @@ import retrofit2.http.GET
 
 interface CurrencyService {
     @GET("list")
-    suspend fun getCurrencyList(): Response<CurrenciesDto>
+    suspend fun getCurrencyList(): CurrenciesDto
 
 }
